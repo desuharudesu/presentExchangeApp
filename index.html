@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>プレゼント交換</title>
+</head>
+<body>
+    <div id="description">
+        <h1>プレゼント交換ツール</h1>
+        <p>1行に一人ずつ名前を書いて"シャッフル"ボタンを押してください。</p>
+    </div>
+    <br>
+    <textarea class="namesInput"></textarea>
+    <br>
+    <button id="shuffleBtn">
+        シャッフル
+    </button>
+
+    <div id="resultArea" style="display:none;">
+        <h1>プレゼント交換結果</h1>
+        <p>URLを各自に送ってください。</p>
+    </div>
+
+    <div id="personalResults" style="display:none;">
+        <div id="personalName"></div>
+        <div class="small-note" id="userNote"></div>
+    </div>
+
+    <script>
+    // DOMの要素を取得
+    const textarea = document.querySelector(".namesInput");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const resultArea = document.getElementById("resultArea");
+    const description = document.getElementById("description");
+
+    // 現在のページのurlを取得
+    const baseUrl = window.location.origin + window.location.pathname;
+
+    // URL一覧の表示場所
+    const linksContainer = document.createElement("div");
+    resultArea.appendChild(linksContainer);
+
+    // シャッフルボタンのクリックイベント
+    shuffleBtn.onclick = () => {
+
+        // テキストボックスの名前を配列に格納
+        const names = getNamesFromInput(textarea);
+
+        // 不正な入力の場合は処理を中断
+        if(!validateNames(names)) return;
+
+        // 受け取る側の配列をシャッフル
+        let receivers = shuffleArray(names);
+
+        //自分以外に渡すよう調整を実行
+        adjustReceivers(names, receivers);
+
+        // 渡す人と受け取る人のペアの作成を実行
+        const pairs = createPairs(names, receivers);
+
+        // 文字列をJSONに変換してBase64エンコードを実行
+        const resultQUery = encodePayload(pairs);
+
+        // urlを生成して表示を実行
+        generateUrls(baseUrl, resultQUery, pairs, linksContainer);
+
+        // 結果エリアを表示
+        resultArea.style.display = "block";
+    }
+
+
+
+    // 個人結果を表示
+    displayPersonalResult();
+
+
+    // 以下関数群
+    // テキストボックスの名前を配列に格納する関数
+    function getNamesFromInput(textarea){
+        const raw = textarea.value;
+        const names = raw.split("\n").map(n => n.trim()).filter(n => n);
+        return names;
+    }
+
+    // 入力チェックの関数
+    function validateNames(names){
+        if(names.length < 2){
+            alert("2人以上の名前を入れてください");
+            return false;
+        }
+        return true;
+    }
+
+    // 配列をシャッフルする関数
+    function shuffleArray(array){
+        let shuffled = array.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const temp = shuffled[i];
+            shuffled[i] = shuffled[j];
+            shuffled[j] = temp;
+        }
+        return shuffled;
+    }
+
+    // 受け取る側と渡す側が同じにならないように調整する関数
+    function adjustReceivers(names, receivers) {
+        for (let i = 0; i < names.length - 1; i++) {
+            if (names[i] === receivers[i]) {
+                const j = receivers[i];
+                receivers[i] =  receivers[i+1]
+                receivers[i+1] = j;
+            }
+        }
+        if(names[names.length-1] === receivers[names.length-1]){
+            const j = receivers[names.length-1];
+            receivers[names.length-1] =  receivers[0]
+            receivers[0] = j;
+        }
+        return
+    }
+
+    //渡す人と受け取る人のペアを作成する関数
+    function createPairs(names, receivers) {
+        let pairs = [];
+        for (let i = 0; i <= names.length - 1; i++) {
+        pairs[i] = {
+            from: names[i],
+            to: receivers[i]
+        };
+        }
+        return pairs;
+    }
+
+    //文字列をJSONに変換してBase64エンコードする関数
+    function encodePayload(pairs) {
+        const json = JSON.stringify(pairs);
+        return btoa(unescape(encodeURIComponent(json)));
+    }
+
+    // urlを生成して表示する関数
+    function generateUrls(baseUrl, resultQUery, pairs, linksContainer) {
+        linksContainer.innerHTML = "";
+        for(let i = 0; i < pairs.length; i++){
+            const url = `${baseUrl}?p=${encodeURIComponent(resultQUery)}&u=${encodeURIComponent(pairs[i].from)}`;
+            const div = document.createElement("div");
+            div.className = "link-box";
+            div.innerHTML = `
+                <strong>${pairs[i].from}</strong> さんに送るURL：<br>
+                <span>${url}</span>
+            `;
+            linksContainer.appendChild(div);
+        }
+    }
+
+    // 個人結果表示処理
+    function displayPersonalResult() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const payload = urlParams.get('p');
+        const userName = urlParams.get('u');
+
+        const decodedJson = decodeURIComponent(escape(atob(payload)));
+        const pairs = JSON.parse(decodedJson);
+
+        const personalResults = document.getElementById("personalResults");
+        const personalNameDiv = document.getElementById("personalName");
+        const userNoteDiv = document.getElementById("userNote");
+
+        const pair = pairs.find(p => p.from === userName);
+        if (pair) {
+            personalNameDiv.textContent = `${userName} さんは ${pair.to} さんにプレゼントをあげます。`;
+            personalResults.style.display = "block";
+        } 
+         // 作成画面を隠す       
+        textarea.style.display = "none";
+        shuffleBtn.style.display = "none";
+        description.style.display = "none";
+    }
+  </script>
+</body>
+</html>
