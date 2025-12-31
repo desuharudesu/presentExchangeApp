@@ -3,7 +3,10 @@
 ## 全体概要
 複数人でのプレゼント交換の際に、交換相手をランダムに決定するためのWebアプリです。
 
-## Ver1 について
+## Versions
+- v1.0-frontend : フロント技術のみで作成した初期版（Qiita記事）
+
+## v1.0-frontend について
 
 ### URL
 https://desuharudesu.github.io/presentExchangeApp/index.html
